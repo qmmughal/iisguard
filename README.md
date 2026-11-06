@@ -24,7 +24,7 @@ iisguard scan /var/log/nginx/access.log /var/log/php8.3-fpm.log --output-format 
 ```
 iisguard audit --kev                       # this machine; downloads the CISA KEV feed (cached 24 h)
 iisguard audit --kev --offline             # no network: cache or bundled snapshot
-iisguard audit --webroot D:\sites --app-root D:pps --php-dir C:\php
+iisguard audit --webroot D:\sites --app-root D:\apps --php-dir C:\php
 iisguard audit --inventory inventory.json  # audit a JSON inventory (see tests/fixtures/inventory.json)
 ```
 
