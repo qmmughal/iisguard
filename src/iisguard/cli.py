@@ -18,14 +18,9 @@ from iisguard.rules import RuleError, RuleSet, load_rules
 
 # command -> (milestone that implements it, help text)
 PLANNED: dict[str, tuple[str, str]] = {
-    "watch": ("M4", "tail logs and block attackers (dry-run unless --live)"),
     "exposure": ("M5", "read-only external exposure check: exposure --url <your domain>"),
-    "block": ("M4", "block list | unban | rollback"),
-    "fix": ("M4", "guided fixes: machinekey | headers | uploads | php-ini | wp-upgrade-dir [--apply]"),
-    "quarantine": ("M4", "move a suspicious file to quarantine"),
     "export": ("M5", "export rules: sigma | yara | crowdsec | modsec | iplist"),
     "report": ("M5", "generate csv / json / html / sarif reports"),
-    "service": ("M4", "service install | uninstall | start | stop"),
     "update-rules": ("M5", "fetch the latest rule pack"),
 }
 
@@ -92,6 +87,10 @@ def build_parser() -> argparse.ArgumentParser:
         else:
             fp.add_argument("--output-format", choices=("text", "json"), default="text")
             fp.add_argument("--fail-on-change", action="store_true", help="exit 1 if anything changed")
+
+    from iisguard import cli_m4
+
+    cli_m4.register(sub)
 
     for name, (ms, text) in PLANNED.items():
         sub.add_parser(name, help=f"{text} [planned {ms}]", add_help=True).add_argument(
@@ -292,6 +291,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
+    if getattr(args, "func", None) is not None:
+        return int(args.func(args))
     if args.command == "scan":
         return _cmd_scan(args)
     if args.command == "audit":

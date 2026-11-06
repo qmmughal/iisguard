@@ -270,11 +270,6 @@ def test_cli_scan_json_and_fail_on(logs: dict[str, Path], capsys: pytest.Capture
     assert cli.main(["scan", str(logs["clean_iis"]), "--no-detect-admin", "--fail-on", "low"]) == 0
 
 
-def test_cli_unimplemented_command_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
-    assert cli.main(["block"]) == 2
-    assert "M4" in capsys.readouterr().err
-
-
 def test_out_of_order_timestamps_do_not_fake_a_flood(tmp_path: Path) -> None:
     # 200 requests from one IP whose timestamps alternate 23:xx / 00:xx (time going backwards):
     rows = []
