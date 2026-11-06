@@ -1,0 +1,42 @@
+name: New detection rule
+description: Propose a detection for log lines, files, or config. Use harmless markers only.
+labels: ["rule"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not paste working exploit code or real malware. Describe the pattern and give a harmless example string."
+  - type: textarea
+    id: threat
+    attributes:
+      label: What does it detect, and how do you know?
+      description: "Link the advisory, report or write-up you read. Unverifiable claims will be marked as such or rejected."
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it show up?
+      options: [web access log (IIS/nginx/Apache), PHP / web-server error log, file content, config file, process / event log, other]
+    validations:
+      required: true
+  - type: textarea
+    id: pattern
+    attributes:
+      label: Proposed pattern (RE2-compatible, no lookaround) and field (path / query / uri / ua / method / message)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Samples that MUST match, and samples that must NOT match
+      description: "The no-match samples matter most: they stop the rule from locking out real users."
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suggested severity
+      options: [low, medium, high, critical]
+    validations:
+      required: true

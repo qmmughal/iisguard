@@ -13,6 +13,12 @@ from iisguard.models import ParseStats
 from iisguard.rules import RuleSet, load_rules
 
 
+@pytest.fixture(autouse=True)
+def _isolated_state(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never read or write the developer's real iisguard state dir (rule packs, CDN lists, block state)."""
+    monkeypatch.setenv("IISGUARD_STATE_DIR", str(tmp_path_factory.mktemp("state")))
+
+
 @pytest.fixture(scope="session")
 def logs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     d = tmp_path_factory.mktemp("logs")

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.4.0 (unreleased) - M4 + M5: block, fix, export, report, exposure, release
+- Firewall: `netsh`, `nftables` (single atomic transaction), `iptables` (new chain + `iptables-restore`, then swap),
+  optional Cloudflare IP Access Rules (token from the environment). Add-then-remove sync, undo on failure, cap with
+  lowest-score eviction, TTL expiry, `block list|sync|unban|rollback|clear`. Every IP passes the protector again at
+  sync time, including IPs read back from the state file.
+- `watch`: poll-based tailer (truncation/rotation safe, keeps the IIS `#Fields:` header), rolling score window.
+- Fixes with masked diff, backup, `--apply`, `fix rollback`: `machinekey`, `headers`, `uploads`, `php-ini`,
+  `wp-upgrade-dir`; `quarantine` (+ `--restore`). Text-level web.config editing keeps comments, BOM and CRLF.
+- `service`: Task Scheduler XML / systemd unit generation (dry-run unless `--apply`).
+- Exports: Sigma (validated with pySigma), YARA (validated with yara-x), CrowdSec scenarios + blocklist (RE2-safe),
+  ModSecurity/Coraza `SecRule`s (detect | block | crs modes), IP lists (txt/csv/json/nft).
+- Reports: CSV (formula-injection safe), JSON, single-file offline HTML (dark/light, escaped, CSP), SARIF 2.1.0.
+- `exposure --url`: headers, TLS, HTTP->HTTPS, banners, cookies, directory listing, sensitive files, admin panels,
+  origin-direct check with a user-supplied origin IP. Refuses any host not confirmed with `--confirm-owner`.
+- `update-rules [--cdn]`: SHA-256 + per-rule tests before install, previous copy kept, falls back to bundled rules.
+  New `exclude` rule field replaces lookahead so every rule exports cleanly to RE2-based tools.
+- Docs, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, issue templates, release workflow (PyPI trusted publishing + zipped
+  Windows bundle with SHA-256), single-file `.pyz` bundle.
+- Bug fixed during testing: netsh batch rule names were derived from the IP index, so every batch got the same name.
+
 ## 0.3.0 (unreleased) - M3: hunt, FIM, process detection
 - `iisguard hunt PATH... [--checks files,secrets,webconfig,processes] [--since DAYS] [--events FILE]`.
 - File hunter (`webshell.py`): PHP / ASPX / JSP signatures, decode-chain and request-to-exec combos, entropy / long

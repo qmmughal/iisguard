@@ -18,7 +18,15 @@ jobs:
       - run: python -m pip install -U pip
       - run: python -m pip install -e ".[dev]"
       - run: ruff check .
-      - run: ruff format --check src tests
+      - run: ruff format --check src tests scripts
       - run: mypy
+      # Exports are validated for real here: pySigma parses every Sigma rule, yara-x compiles every YARA rule.
       - run: pytest -q
       - run: iisguard --help
+      - name: Rule-pack index is in sync with the bundled rules
+        run: python scripts/build_rule_pack_index.py && git diff --exit-code rule-packs
+      - name: Build the single-file bundle and smoke-test it
+        run: |
+          python scripts/build_bundle.py
+          python dist/iisguard.pyz --version
+          python dist/iisguard.pyz audit --kev --offline --inventory tests/fixtures/inventory.json

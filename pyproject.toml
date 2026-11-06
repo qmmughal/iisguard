@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "iisguard"
-version = "0.1.0"
+version = "0.4.0"
 description = "Free website-defense toolkit: audit, detect, block, fix and share detections for IIS, nginx, Apache and PHP."
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,7 +16,7 @@ dependencies = []
 yaml = ["pyyaml>=6"]
 win = ["pywin32>=306; sys_platform == 'win32'"]
 report = ["jinja2>=3"]
-dev = ["pytest>=8", "ruff", "mypy", "pyyaml>=6", "types-PyYAML"]
+dev = ["pytest>=8", "ruff", "mypy", "pyyaml>=6", "types-PyYAML", "pysigma>=1", "yara-x>=1", "build"]
 
 [project.scripts]
 iisguard = "iisguard.cli:main"

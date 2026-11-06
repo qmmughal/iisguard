@@ -16,14 +16,6 @@ from iisguard.models import SEVERITIES, SEVERITY_RANK, ParseStats
 from iisguard.report import render_json, render_text
 from iisguard.rules import RuleError, RuleSet, load_rules
 
-# command -> (milestone that implements it, help text)
-PLANNED: dict[str, tuple[str, str]] = {
-    "exposure": ("M5", "read-only external exposure check: exposure --url <your domain>"),
-    "export": ("M5", "export rules: sigma | yara | crowdsec | modsec | iplist"),
-    "report": ("M5", "generate csv / json / html / sarif reports"),
-    "update-rules": ("M5", "fetch the latest rule pack"),
-}
-
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -91,11 +83,10 @@ def build_parser() -> argparse.ArgumentParser:
     from iisguard import cli_m4
 
     cli_m4.register(sub)
+    from iisguard import cli_m5
 
-    for name, (ms, text) in PLANNED.items():
-        sub.add_parser(name, help=f"{text} [planned {ms}]", add_help=True).add_argument(
-            "args", nargs="*", help=argparse.SUPPRESS
-        )
+    cli_m5.register(sub)
+
     return p
 
 
@@ -301,8 +292,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_hunt(args)
     if args.command == "fim":
         return _cmd_fim(args)
-    ms = PLANNED[args.command][0]
-    print(f"iisguard {args.command}: not implemented yet (planned for {ms}).", file=sys.stderr)
+    parser.error(f"unknown command {args.command!r}")
     return 2
 
 

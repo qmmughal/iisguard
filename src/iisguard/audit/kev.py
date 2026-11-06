@@ -8,7 +8,6 @@ With ``offline=True`` the network is never touched.
 from __future__ import annotations
 
 import json
-import os
 import re
 import time
 import urllib.request
@@ -84,8 +83,9 @@ def _to_kev(data: dict[str, Any], source: str, web_only: bool = True) -> Kev:
 
 
 def default_cache_dir() -> Path:
-    base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
-    return Path(base) / "iisguard"
+    from iisguard.state import state_dir
+
+    return state_dir() / "cache"
 
 
 def _download(url: str, timeout: int = 30) -> dict[str, Any]:

@@ -44,7 +44,14 @@ def bundled_cdn_ranges() -> dict[str, list[str]]:
     """Shipped CDN ranges, keyed by provider. Refreshed by ``update-rules``."""
     text = resources.files("iisguard").joinpath("data/cdn_ranges.json").read_text(encoding="utf-8")
     data = json.loads(text)
-    return {k: list(v) for k, v in data.get("providers", {}).items()}
+    out = {k: list(v) for k, v in data.get("providers", {}).items()}
+    from iisguard.state import read_json, state_dir
+
+    updated = read_json(state_dir() / "cdn_ranges.json", {})
+    for k, v in updated.get("providers", {}).items():
+        if isinstance(v, list) and v:
+            out[str(k)] = [str(x) for x in v]  # a refreshed list replaces the bundled snapshot
+    return out
 
 
 class Protector:

@@ -45,6 +45,8 @@ class Rule:
     tests_match: list[str] = dataclasses.field(default_factory=list)
     tests_no_match: list[str] = dataclasses.field(default_factory=list)
     rx: re.Pattern[str] | None = None
+    exclude: str = ""  # a hit is ignored when this also matches (keeps patterns free of lookaround)
+    exclude_rx: re.Pattern[str] | None = None
 
     def __hash__(self) -> int:
         return hash(self.id)

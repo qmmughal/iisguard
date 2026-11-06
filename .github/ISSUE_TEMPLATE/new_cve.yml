@@ -1,0 +1,38 @@
+name: New CVE / fixed-version data
+description: Add or correct a vulnerability entry in the known-fixed-versions map.
+labels: ["cve-data"]
+body:
+  - type: input
+    id: cve
+    attributes:
+      label: CVE id(s)
+      placeholder: CVE-2026-XXXXX
+    validations:
+      required: true
+  - type: input
+    id: product
+    attributes:
+      label: Product and affected branches
+    validations:
+      required: true
+  - type: textarea
+    id: fixed
+    attributes:
+      label: Fixed version per branch
+      description: "Only versions you read in an official source. If the vendor has not published them, say so."
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Official source URLs (vendor advisory, CISA KEV, NVD, MSRC, php.net, wordpress.org...)
+    validations:
+      required: true
+  - type: checkboxes
+    id: kev
+    attributes:
+      label: Checks
+      options:
+        - label: I checked whether it is in the CISA KEV catalog
+        - label: I confirmed the fixed version in the vendor's own page (not only a blog)
+        - label: This is not exploit code and contains no working payload

@@ -19,7 +19,7 @@ from iisguard.models import RULE_FIELDS, SEVERITIES, LogEvent, Rule
 
 _ALLOWED_KEYS = {
     "id", "category", "score", "severity", "field", "pattern", "description",
-    "cve", "enabled", "methods", "tests",
+    "cve", "enabled", "methods", "tests", "exclude",
 }  # fmt: skip
 _REQUIRED_KEYS = {"id", "category", "score", "severity", "field", "pattern", "tests"}
 _FIELD_ATTR = {"line": "raw"}
@@ -53,6 +53,20 @@ def _parse_yaml(text: str, origin: str) -> Any:
 
 
 def load_rules(path: str | None = None, disabled: Iterable[str] = ()) -> list[Rule]:
+    """Load rules from *path*, else an installed update-rules pack, else the bundled pack."""
+    if path is None:
+        from iisguard.state import state_dir
+
+        user = state_dir() / "rules" / "web-core" / "rules.yaml"
+        if user.is_file():
+            try:
+                return _load(str(user), disabled)
+            except (RuleError, OSError):
+                pass  # a broken update must never disable detection: use the bundled pack
+    return _load(path, disabled)
+
+
+def _load(path: str | None, disabled: Iterable[str]) -> list[Rule]:
     text, origin = _load_text(path)
     data = _parse_yaml(text, origin)
     if isinstance(data, dict):
@@ -105,9 +119,27 @@ def load_rules(path: str | None = None, disabled: Iterable[str] = ()) -> list[Ru
                 tests_match=[str(t) for t in t_match],
                 tests_no_match=[str(t) for t in t_no],
                 rx=rx,
+                exclude=str(item.get("exclude") or ""),
+                exclude_rx=_compile_exclude(item.get("exclude"), rid, origin),
             )
         )
     return rules
+
+
+def _compile_exclude(value: Any, rid: str, origin: str) -> re.Pattern[str] | None:
+    if not value:
+        return None
+    try:
+        return re.compile(str(value), re.IGNORECASE)
+    except re.error as e:
+        raise RuleError(f"{origin}: rule {rid}: bad exclude pattern: {e}") from e
+
+
+def sample_matches(rule: Rule, sample: str) -> bool:
+    """True when the rule fires on *sample* (pattern matches and no exclude matches). Used by the rule tests."""
+    s = sample.replace("<LONG1000>", "A" * 1000)
+    assert rule.rx is not None
+    return bool(rule.rx.search(s)) and not (rule.exclude_rx and rule.exclude_rx.search(s))
 
 
 class RuleSet:
@@ -143,6 +175,6 @@ class RuleSet:
                 for r in group:
                     if r.methods and ev.method not in r.methods:
                         continue
-                    if r.rx is not None and r.rx.search(val):
+                    if r.rx is not None and r.rx.search(val) and not (r.exclude_rx and r.exclude_rx.search(val)):
                         out.append(r)
         return out

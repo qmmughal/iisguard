@@ -144,7 +144,8 @@
   score: 60
   severity: high
   field: path
-  pattern: '/owa/auth/(?!(?:logon|errorfe|error|logoff|expiredpassword|redirsuiteservice|frame|getidtoken|outlook|redir|timeout|trace)\.aspx$)[^/]+\.aspx$'
+  pattern: '/owa/auth/[^/]+\.aspx$'
+  exclude: '/owa/auth/(?:logon|errorfe|error|logoff|expiredpassword|redirsuiteservice|frame|getidtoken|outlook|redir|timeout|trace)\.aspx$'
   description: Unexpected .aspx directly under /owa/auth/ (possible dropped shell)
   tests:
     match:

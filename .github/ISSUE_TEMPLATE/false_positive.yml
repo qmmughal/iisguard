@@ -1,0 +1,42 @@
+name: False positive
+description: A rule, hunt finding or audit result flagged something that is fine.
+labels: ["false-positive"]
+body:
+  - type: markdown
+    attributes:
+      value: "Please redact IPs, hostnames, tokens and personal data. Never paste real secrets."
+  - type: input
+    id: version
+    attributes:
+      label: iisguard version and rule pack version
+      description: "`iisguard --version` and the contents of rules/VERSION (or the `update-rules` output)"
+    validations:
+      required: true
+  - type: dropdown
+    id: command
+    attributes:
+      label: Which command?
+      options: [scan, watch / block, hunt (files), hunt (secrets), hunt (webconfig), hunt (processes), audit, exposure, export, other]
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id or finding id
+      placeholder: "e.g. webshell-post-image, sqli-basic, machinekey-hardcoded"
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: The log line / file excerpt / output that was flagged (redacted)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is it legitimate?
+      description: "What application or workflow produces this? Is it common (so the rule should change) or specific to your site (so an allow-list is enough)?"
+    validations:
+      required: true

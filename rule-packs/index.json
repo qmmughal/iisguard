@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "packs": [
+    {
+      "name": "web-core",
+      "version": "2026.11.07-2",
+      "file": "web-core/rules.yaml",
+      "sha256": "5f3ff1cf523a2741c04c94959e688386033c7daa136a2621d82a269a914718cc"
+    }
+  ]
+}

@@ -12,7 +12,7 @@ from iisguard.config import Config, ConfigError, load_config
 from iisguard.firewall.safety import Protector, bundled_cdn_ranges, detect_admin_ips
 from iisguard.logs import UnknownFormat, iter_events
 from iisguard.models import LogEvent, ParseStats
-from iisguard.rules import RuleError, RuleSet, load_rules
+from iisguard.rules import RuleError, RuleSet, load_rules, sample_matches
 
 EXPECTED_RULES = {
     "php2shell-upload-progress", "wp-setup-config-probe", "wp-upgrade-dir-probe", "viewstate-long-get",
@@ -26,17 +26,12 @@ def hit_ids(rep) -> set[tuple[str, str]]:  # type: ignore[no-untyped-def]
 
 
 # ------------------------------------------------------------------ rules
-def _sample(s: str) -> str:
-    return s.replace("<LONG1000>", "A" * 1000)
-
-
 @pytest.mark.parametrize("rule", load_rules(), ids=lambda r: r.id)
 def test_rule_own_tests(rule):  # type: ignore[no-untyped-def]
-    assert rule.rx is not None
     for s in rule.tests_match:
-        assert rule.rx.search(_sample(s)), f"{rule.id} should match {s!r}"
+        assert sample_matches(rule, s), f"{rule.id} should match {s!r}"
     for s in rule.tests_no_match:
-        assert not rule.rx.search(_sample(s)), f"{rule.id} must NOT match {s!r}"
+        assert not sample_matches(rule, s), f"{rule.id} must NOT match {s!r}"
 
 
 def test_rules_bad_pack_rejected(tmp_path: Path) -> None:

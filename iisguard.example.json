@@ -1,0 +1,15 @@
+{
+  "allowlist": ["203.0.113.10", "198.51.100.0/24"],
+  "cdn_ranges": [],
+  "admin_ips": [],
+  "block_score": 100,
+  "max_blocks": 500,
+  "login_paths": ["/wp-login\\.php", "/xmlrpc\\.php", "/login", "/owa/auth\\.owa"],
+  "spray_window": 600,
+  "spray_min_ips": 10,
+  "spray_per_ip_max": 5,
+  "brute_attempts": 10,
+  "flood_requests": 150,
+  "flood_window": 10,
+  "disabled_rules": []
+}

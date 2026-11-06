@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem in iisguard itself
+    url: https://github.com/qmmughal/iisguard/security/advisories/new
+    about: Please use a private advisory, not a public issue.
