@@ -15,7 +15,7 @@ detections as Sigma, YARA, CrowdSec and ModSecurity rules.
 pip install .
 iisguard scan C:\inetpub\logs\LogFiles\W3SVC1\u_ex261107.log
 iisguard scan /var/log/nginx/access.log /var/log/php8.3-fpm.log --output-format json
-```text
+```
 
 `scan` is read-only. It reports what it **would** block; nothing touches your firewall.
 
