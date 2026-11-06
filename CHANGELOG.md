@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 (unreleased) - M3: hunt, FIM, process detection
+- `iisguard hunt PATH... [--checks files,secrets,webconfig,processes] [--since DAYS] [--events FILE]`.
+- File hunter (`webshell.py`): PHP / ASPX / JSP signatures, decode-chain and request-to-exec combos, entropy / long
+  encoded blobs, masquerading files (script code inside images/text, double extensions), scripts in upload folders,
+  `.user.ini` / `.htaccess` `auto_prepend_file`, handler mappings that run images as scripts, unexpected `.aspx`
+  under `/owa/auth/`, recent `.aspx` under SharePoint `_layouts`. Location rules use the path relative to the scan root.
+- `fim init|check`: SHA-256 baseline of scripts/config/js, reports added / modified / deleted, flags new scripts in uploads.
+- Process detection (`process.py`): web worker (w3wp, php-cgi, php-fpm, httpd, nginx, tomcat...) spawning shells or recon
+  tools. Inputs: exported Security 4688 / Sysmon 1 XML, auditd, live process list (`ps` / read-only CIM query).
+- `audit/secrets.py`: `.env`, `appsettings*.json`, wp-config backups, `.git`, key files, OpenAI / Anthropic / AWS / Stripe /
+  GitHub / Slack patterns. Values are always masked. Optional reachability check (`--url` + `--confirm-owner`) is
+  rate-limited, capped at 50 URLs, never follows redirects and refuses any host you did not confirm.
+- `audit/webconfig.py`: hard-coded and shared machineKeys (fingerprints only), `enableViewStateMac=false`, debug, tracing,
+  customErrors, directory browsing, missing request limits. DOCTYPE/ENTITY files are refused.
+- Fixes found while testing: location rules were evaluated on absolute paths (a scan under a `Temp` folder flagged
+  everything); `php-fpm: pool www` process titles never matched.
+
 ## 0.2.0 (unreleased) - M2: KEV audit
 - `iisguard audit [--kev] [--offline] [--inventory FILE] [--webroot D] [--app-root D] [--php-dir D]`.
 - CISA KEV loader: live download, 24 h cache, stale-cache fallback, bundled web-facing snapshot (catalog 2026.11.06).

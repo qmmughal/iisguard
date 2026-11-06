@@ -41,6 +41,10 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
+"src/iisguard/webshell.py" = ["E501"]
+"src/iisguard/process.py" = ["E501"]
+"src/iisguard/audit/secrets.py" = ["E501"]
+"src/iisguard/audit/webconfig.py" = ["E501"]
 
 [tool.mypy]
 strict = true

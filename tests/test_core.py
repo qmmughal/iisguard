@@ -271,8 +271,8 @@ def test_cli_scan_json_and_fail_on(logs: dict[str, Path], capsys: pytest.Capture
 
 
 def test_cli_unimplemented_command_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
-    assert cli.main(["hunt"]) == 2
-    assert "M3" in capsys.readouterr().err
+    assert cli.main(["block"]) == 2
+    assert "M4" in capsys.readouterr().err
 
 
 def test_out_of_order_timestamps_do_not_fake_a_flood(tmp_path: Path) -> None:

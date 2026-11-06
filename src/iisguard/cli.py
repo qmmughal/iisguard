@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from iisguard import __version__
 from iisguard.analyzer import Analyzer, Report
@@ -18,8 +19,6 @@ from iisguard.rules import RuleError, RuleSet, load_rules
 # command -> (milestone that implements it, help text)
 PLANNED: dict[str, tuple[str, str]] = {
     "watch": ("M4", "tail logs and block attackers (dry-run unless --live)"),
-    "fim": ("M3", "file-integrity baseline: fim init | fim check"),
-    "hunt": ("M3", "hunt for web-shells and suspicious files in a webroot"),
     "exposure": ("M5", "read-only external exposure check: exposure --url <your domain>"),
     "block": ("M4", "block list | unban | rollback"),
     "fix": ("M4", "guided fixes: machinekey | headers | uploads | php-ini | wp-upgrade-dir [--apply]"),
@@ -63,6 +62,36 @@ def build_parser() -> argparse.ArgumentParser:
     au.add_argument("--all", action="store_true", help="also show items that are already fixed")
     au.add_argument("--cache-dir", help="where the KEV feed is cached")
     au.add_argument("--fail-on-vulnerable", action="store_true", help="exit 1 on vulnerable/EOL/misconfigured")
+
+    hu = sub.add_parser("hunt", help="hunt web-shells, exposed secrets, risky web.config, web-server child processes")
+    hu.add_argument("paths", nargs="*", help="webroot folder(s) to search")
+    hu.add_argument(
+        "--checks",
+        default="files,secrets,webconfig",
+        help="comma list of: files,secrets,webconfig,processes (default: files,secrets,webconfig)",
+    )
+    hu.add_argument("--since", type=float, metavar="DAYS", help="treat files changed in the last DAYS as recent")
+    hu.add_argument("--min-score", type=int, default=40, help="minimum file score to report (default 40)")
+    hu.add_argument(
+        "--events", action="append", default=[], metavar="FILE", help="exported 4688/Sysmon XML or auditd log"
+    )
+    hu.add_argument("--url", help="base URL to test whether exposed files are reachable (needs --confirm-owner)")
+    hu.add_argument("--confirm-owner", help="the host name you own; the URL check refuses any other host")
+    hu.add_argument("--verbose", action="store_true", help="include low-severity findings")
+    hu.add_argument("--output-format", choices=("text", "json"), default="text")
+    hu.add_argument("--fail-on", choices=SEVERITIES, help="exit 1 if a finding of this severity or higher exists")
+
+    fi = sub.add_parser("fim", help="file-integrity monitoring: fim init | fim check")
+    fsub = fi.add_subparsers(dest="fim_cmd", metavar="<init|check>", required=True)
+    for nm, hp in (("init", "record a baseline of the webroot"), ("check", "compare the webroot with the baseline")):
+        fp = fsub.add_parser(nm, help=hp)
+        fp.add_argument("path", help="webroot folder")
+        fp.add_argument("--baseline", default="iisguard-fim.json", help="baseline file (keep a copy off-server)")
+        if nm == "init":
+            fp.add_argument("--all", action="store_true", help="hash every file, not only scripts/config/js/html")
+        else:
+            fp.add_argument("--output-format", choices=("text", "json"), default="text")
+            fp.add_argument("--fail-on-change", action="store_true", help="exit 1 if anything changed")
 
     for name, (ms, text) in PLANNED.items():
         sub.add_parser(name, help=f"{text} [planned {ms}]", add_help=True).add_argument(
@@ -134,6 +163,129 @@ def _cmd_audit(a: argparse.Namespace) -> int:
     return 1 if a.fail_on_vulnerable and any(f.status in bad for f in findings) else 0
 
 
+def _cmd_hunt(a: argparse.Namespace) -> int:
+    import json
+    import subprocess
+
+    from iisguard import process, webshell
+    from iisguard.audit import secrets, webconfig
+
+    checks = {c.strip() for c in a.checks.split(",") if c.strip()}
+    bad = checks - {"files", "secrets", "webconfig", "processes"}
+    if bad:
+        print(f"error: unknown check(s): {', '.join(sorted(bad))}", file=sys.stderr)
+        return 2
+    if checks & {"files", "secrets", "webconfig"} and not a.paths:
+        print("error: give at least one webroot path", file=sys.stderr)
+        return 2
+    result: dict[str, object] = {}
+    worst = -1
+    if "files" in checks:
+        fs = webshell.hunt(a.paths, a.since, a.min_score)
+        result["files"] = [f.to_dict() for f in fs]
+        worst = max([worst, *(SEVERITY_RANK[f.severity] for f in fs)])
+    if "secrets" in checks:
+        ss = secrets.scan_webroot(a.paths, include_low=a.verbose)
+        if a.url:
+            if not a.confirm_owner:
+                print("error: --url needs --confirm-owner <host you own>", file=sys.stderr)
+                return 2
+            try:
+                secrets.check_reachable(ss, a.url, a.confirm_owner)
+            except ValueError as e:
+                print(f"error: {e}", file=sys.stderr)
+                return 2
+        result["secrets"] = [f.to_dict() for f in ss]
+        worst = max([worst, *(SEVERITY_RANK[f.severity] for f in ss)])
+    if "webconfig" in checks:
+        ca = webconfig.audit_roots(a.paths)
+        shown = [f for f in ca.findings if a.verbose or f.severity != "low"]
+        result["webconfig"] = {"files": ca.files, "findings": [f.to_dict() for f in shown], "skipped": ca.skipped}
+        worst = max([worst, *(SEVERITY_RANK[f.severity] for f in shown)])
+    if "processes" in checks or a.events:
+        events: list[process.ProcEvent] = []
+        for ev_file in a.events:
+            try:
+                text = Path(ev_file).read_text(encoding="utf-8-sig", errors="replace")
+                events += (
+                    process.parse_auditd(text.splitlines()) if "type=SYSCALL" in text else process.parse_event_xml(text)
+                )
+            except (OSError, ValueError) as e:
+                print(f"error: {ev_file}: {e}", file=sys.stderr)
+                return 2
+        if "processes" in checks:
+
+            def run(cmd: list[str]) -> str:
+                return subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False).stdout
+
+            events += process.live_events(run)
+        pf = process.detect(events)
+        result["processes"] = {"examined": len(events), "findings": [f.to_dict() for f in pf]}
+        worst = max([worst, *(SEVERITY_RANK[f.severity] for f in pf)])
+    print(json.dumps(result, indent=2) if a.output_format == "json" else _format_hunt(result))
+    return 1 if a.fail_on and worst >= SEVERITY_RANK[a.fail_on] else 0
+
+
+def _format_hunt(result: dict[str, object]) -> str:
+    out: list[str] = []
+    files = result.get("files")
+    if isinstance(files, list):
+        out.append(f"Suspicious files: {len(files)}")
+        for f in files:
+            out.append(f"  [{f['severity']:<8}] score={f['score']:<3} {f['path']}")
+            out += [f"      - {r}" for r in f["reasons"]]
+            out.append(f"      sha256={f['sha256']}")
+    secs = result.get("secrets")
+    if isinstance(secs, list):
+        out.append(f"\nSecrets / exposed files: {len(secs)} (values are masked)")
+        for f in secs:
+            reach = {True: "  REACHABLE OVER HTTP", False: "  not reachable", None: ""}[f["reachable"]]
+            loc = f":{f['line']}" if f["line"] else ""
+            out.append(f"  [{f['severity']:<8}] {f['path']}{loc}: {f['detail']}{reach}")
+    wc = result.get("webconfig")
+    if isinstance(wc, dict):
+        out.append(f"\nweb.config audit: {wc['files']} file(s), {len(wc['findings'])} finding(s)")
+        for f in wc["findings"]:
+            fp = f" key={f['key_fingerprint']}" if f["key_fingerprint"] else ""
+            out.append(f"  [{f['severity']:<8}] {f['path']}: {f['id']}{fp}: {f['detail']}")
+            if f["fix"]:
+                out.append(f"      fix: {f['fix']}")
+        out += [f"  skipped {sk}" for sk in wc["skipped"]]
+    pr = result.get("processes")
+    if isinstance(pr, dict):
+        out.append(f"\nProcess check: {pr['examined']} process record(s), {len(pr['findings'])} finding(s)")
+        for f in pr["findings"]:
+            out.append(f"  [{f['severity']:<8}] {f['rule']}: {f['parent']} -> {f['child']}  {f['cmdline'][:100]}")
+    return "\n".join(out)
+
+
+def _cmd_fim(a: argparse.Namespace) -> int:
+    import json
+
+    from iisguard import fim
+
+    try:
+        if a.fim_cmd == "init":
+            n = fim.init_baseline(a.path, a.baseline, a.all)
+            print(f"Baseline written to {a.baseline}: {n} file(s). Keep a copy somewhere the web server cannot write.")
+            return 0
+        res = fim.check_baseline(a.path, a.baseline)
+    except (OSError, ValueError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    if a.output_format == "json":
+        print(json.dumps(res.to_dict(), indent=2))
+    else:
+        print(f"Added {len(res.added)}, modified {len(res.modified)}, deleted {len(res.deleted)}")
+        for x in res.added:
+            print(f"  + {x['path']}" + ("   <-- script in an upload/media folder" if x["suspicious"] else ""))
+        for x in res.modified:
+            print(f"  ~ {x['path']}")
+        for gone in res.deleted:
+            print(f"  - {gone}")
+    return 1 if a.fail_on_change and res.changed else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -144,6 +296,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_scan(args)
     if args.command == "audit":
         return _cmd_audit(args)
+    if args.command == "hunt":
+        return _cmd_hunt(args)
+    if args.command == "fim":
+        return _cmd_fim(args)
     ms = PLANNED[args.command][0]
     print(f"iisguard {args.command}: not implemented yet (planned for {ms}).", file=sys.stderr)
     return 2
