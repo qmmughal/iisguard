@@ -1,0 +1,25 @@
+{
+  "items": [
+    {"product": "php", "version": "8.3.30", "location": "C:/php83/php-cgi.exe", "extra": {"sapi": "cgi-fcgi", "upload_progress": "On"}},
+    {"product": "php", "version": "8.4.27", "location": "C:/php84/php-cgi.exe", "extra": {"sapi": "cgi-fcgi", "upload_progress": "0"}},
+    {"product": "php", "version": "8.2.34", "location": "/usr/sbin/php-fpm8.2", "extra": {"sapi": "fpm-fcgi", "upload_progress": "Off"}},
+    {"product": "php", "version": "8.1.30", "location": "/opt/php81/bin/php", "extra": {"sapi": "cli"}},
+    {"product": "php", "version": "8.3.6-0ubuntu0.24.04.5", "location": "/usr/sbin/php-fpm8.3", "extra": {"sapi": "fpm-fcgi", "upload_progress": "Off"}},
+    {"product": "php", "version": "8.5.12", "location": "/srv/php85/bin/php", "extra": {"sapi": "cli", "upload_progress": "0"}},
+    {"product": "dotnet-runtime", "version": "8.0.28", "location": "C:/Program Files/dotnet/shared/Microsoft.AspNetCore.App", "extra": {"runtime_name": "Microsoft.AspNetCore.App"}},
+    {"product": "dotnet-runtime", "version": "9.0.20", "location": "C:/Program Files/dotnet/shared/Microsoft.AspNetCore.App", "extra": {"runtime_name": "Microsoft.AspNetCore.App"}},
+    {"product": "dotnet-runtime", "version": "10.0.9", "location": "D:/apps/shop/shop.deps.json", "extra": {"runtime_name": "Microsoft.AspNetCore.App", "self_contained": true}},
+    {"product": "dotnet-runtime", "version": "6.0.36", "location": "C:/Program Files/dotnet/shared/Microsoft.NETCore.App", "extra": {"runtime_name": "Microsoft.NETCore.App"}},
+    {"product": "wordpress", "version": "7.1.3", "location": "D:/sites/blog", "extra": {"upgrade_dir_present": true}},
+    {"product": "wordpress", "version": "7.1.4", "location": "D:/sites/shop", "extra": {"upgrade_dir_present": false}},
+    {"product": "wordpress", "version": "7.0.7", "location": "D:/sites/old", "extra": {}},
+    {"product": "wordpress", "version": "6.5.2", "location": "D:/sites/ancient", "extra": {}},
+    {"product": "sharepoint", "version": "16.0.20326.20100", "location": "SPSE", "extra": {}},
+    {"product": "sharepoint", "version": "16.0.20326.20190", "location": "SPSE-patched", "extra": {}},
+    {"product": "exchange", "version": "15.2.1544.11", "location": "EX01", "extra": {}},
+    {"product": "windows", "version": "10.0.20348.5000", "location": "Windows Server 2022", "extra": {"family": "server"}},
+    {"product": "windows", "version": "10.0.20348.5761", "location": "Windows Server 2022 (patched)", "extra": {"family": "server"}},
+    {"product": "windows", "version": "10.0.26100.9000", "location": "Windows 11 24H2", "extra": {"family": "client"}},
+    {"product": "windows", "version": "10.0.26100.33000", "location": "Windows Server 2025", "extra": {"family": "server"}}
+  ]
+}

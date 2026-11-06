@@ -2,7 +2,7 @@
 
 Free, MIT-licensed website-defense toolkit for IIS, nginx, Apache and PHP hosts. Standard-library-only core, Python 3.11+.
 
-> **Status: early development (M1 of 5).** Log analysis (`scan`) works. The other commands are listed in
+> **Status: early development (M2 of 5).** Log analysis (`scan`) and software audit (`audit`) work. The other commands are listed in
 > `iisguard --help` and are being built; each prints the milestone it is planned for.
 
 Goals: **audit** exposure to actively exploited web vulnerabilities, **detect** attacks in logs/files/processes,
@@ -18,6 +18,20 @@ iisguard scan /var/log/nginx/access.log /var/log/php8.3-fpm.log --output-format 
 ```
 
 `scan` is read-only. It reports what it **would** block; nothing touches your firewall.
+
+## Audit exposure (CISA KEV + known fixed versions)
+
+```
+iisguard audit --kev                       # this machine; downloads the CISA KEV feed (cached 24 h)
+iisguard audit --kev --offline             # no network: cache or bundled snapshot
+iisguard audit --webroot D:\sites --app-root D:pps --php-dir C:\php
+iisguard audit --inventory inventory.json  # audit a JSON inventory (see tests/fixtures/inventory.json)
+```
+
+Output: status, CVE, product, found version, fixed version, KEV due date, action. Statuses: `vulnerable`, `eol`,
+`config` (needs a setting changed), `verify` (cannot be decided automatically, e.g. distro-patched PHP), `manual`
+(vendor has not published version data; we do not guess). Collectors only read: they run `php -v`/`php -i`,
+`dotnet --list-runtimes` and read files/registry.
 
 ## Safety principles
 

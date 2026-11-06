@@ -1,6 +1,5 @@
 # iisguard rule pack. Pack version is in rules/VERSION.
-# CVE ids below come from the project brief and are PENDING verification against
-# official advisories (done in M2). Do not treat them as confirmed.
+# CVE ids are only tagged when verified against a primary source (see audit/data/known_fixed_versions.yaml).
 # Every rule needs tests: at least one 'match' and one 'no_match' sample string,
 # evaluated against the rule's own field. All patterns are case-insensitive.
 - id: php2shell-upload-progress
@@ -9,8 +8,8 @@
   severity: critical
   field: uri
   pattern: 'PHP_SESSION_UPLOAD_PROGRESS'
-  description: Upload-progress marker in the request URI/query (PHP2Shell probe pattern; CVE ids unverified)
-  cve: []
+  description: Upload-progress marker in the request URI/query. php.net lists session upload progress as a confirmed attack path for CVE-2026-109619 and as the CVE-2026-115560 vector (php.net notices 2026-10-21 and 2026-10-23)
+  cve: [CVE-2026-109619, CVE-2026-115560]
   tests:
     match:
       - 'POST /index.php?PHP_SESSION_UPLOAD_PROGRESS=marker 200'
@@ -34,7 +33,7 @@
   severity: high
   field: path
   pattern: '/wp-content/upgrade(?:/|$)'
-  description: Access to the core-upgrade staging folder
+  description: Access to the core-upgrade staging folder. The exact staging path used by CVE-2026-119977 is NOT confirmed by any source read (wp-content/upgrade is a heuristic)
   tests:
     match:
       - '/wp-content/upgrade/wordpress-6/index.php'

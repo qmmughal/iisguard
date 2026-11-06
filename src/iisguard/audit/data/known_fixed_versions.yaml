@@ -1,0 +1,131 @@
+# Maintained map of fixed versions. Every entry cites the source it was verified against.
+# status: verified = primary vendor source read; partial = some branches unverified;
+#         secondary = only third-party reporting found; manual = no version data published (do not guess).
+# Last reviewed: 2026-11-07
+entries:
+  - id: php-oct2026-rce
+    product: php
+    cves: [CVE-2026-109618, CVE-2026-109619]
+    title: PHP unauthenticated RCE (OOM corruption / stale request state; "php2shell")
+    status: verified
+    fixed:
+      - branch: '8.5'
+        fixed_in: 8.5.12
+      - branch: '8.4'
+        fixed_in: 8.4.27
+      - branch: '8.3'
+        fixed_in: 8.3.36
+      - branch: '8.2'
+        fixed_in: 8.2.35
+    eol_branches: ['8.1', '8.0', '7.4', '7.3', '7.2', '7.1', '7.0', '5.6']
+    sources:
+      - https://www.php.net/archive/2026.php#2026-10-21-1
+      - https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w
+      - https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp
+      - https://www.cisa.gov/news-events/alerts/2026/10/21/critical-vulnerabilities-php-require-immediate-patching
+    action: Update to the fixed release for your branch. Branches 8.1 and older are end-of-life and get no fix.
+    notes: PHP 8.2 reaches end of life on 2026-12-31 (php.net 8.2.35 release notice).
+  - id: php-session-upload-progress
+    product: php
+    cves: [CVE-2026-115560]
+    title: PHP session upload-progress RCE vector (unpatched; config workaround)
+    status: verified
+    unpatched: true
+    config_check: session.upload_progress.enabled
+    sources:
+      - https://www.php.net/archive/2026.php#2026-10-23-1
+    action: Set session.upload_progress.enabled=0 in php.ini / FPM pool / server config (NOT ini_set or .user.ini), restart every worker. Fix is planned for the next regular PHP release.
+    notes: php.net says exploitation needs session.serialize_handler=php_binary or php_serialize switched to php at runtime via ini_set() before session_start(); the setting is also a listed mitigation for CVE-2026-109619. NVD had no record of CVE-2026-115560 on 2026-11-06.
+  - id: wordpress-core-upgrade-race
+    product: wordpress
+    cves: [CVE-2026-119977]
+    title: WordPress core upgrade-window TOCTOU RCE (predictable, web-accessible staging paths)
+    status: partial
+    fixed:
+      - branch: '7.1'
+        fixed_in: 7.1.4
+      - branch: '7.0'
+        fixed_in: 7.0.8
+    affected_range: 4.7.0 - 7.1.3 (per Wordfence, secondary)
+    sources:
+      - https://wordpress.org/news/2026/10/wordpress-7-1-4
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-119977
+    action: Update to the latest release of your branch. Branches other than 7.1 and 7.0 are being backported "as they become ready" (wordpress.org); check wordpress.org/download/releases.
+    notes: 7.1.4 is vendor-confirmed (released 2026-10-28). 7.0.8 comes from a third-party table and is unverified against wordpress.org. The exact staging path (wp-content/upgrade?) is NOT confirmed by any source read.
+  - id: dotnet-decompression-dos
+    product: dotnet-runtime
+    cves: [CVE-2026-69304]
+    title: ASP.NET Core data-amplification (highly compressed data) denial of service
+    status: verified
+    fixed:
+      - branch: '8.0'
+        fixed_in: 8.0.31
+      - branch: '9.0'
+        fixed_in: 9.0.20
+      - branch: '10.0'
+        fixed_in: 10.0.12
+    sources:
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-69304
+      - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-69304
+    action: Update the .NET / ASP.NET Core runtime (and hosting bundle) to the fixed version; for self-contained apps rebuild and redeploy.
+    notes: Versions are the .NET runtime fixed versions from NVD CPE data. NVD also lists NuGet-package style bounds 8.0.28 / 9.0.17 / 10.0.9 for asp.net_core; we use the runtime numbers.
+  - id: aspnetcore-oct2026-manual
+    product: dotnet-runtime
+    cves: [CVE-2026-102870, CVE-2026-96230]
+    title: ASP.NET Core October 2026 fixes (code injection; improper neutralization / XSS)
+    status: manual
+    sources:
+      - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-102870
+      - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-96230
+    action: Install the latest .NET servicing release. NVD had no fixed-version data on 2026-11-06 (Undergoing / Awaiting Analysis), so no exact version is asserted here.
+    notes: NVD describes CVE-2026-96230 as cross-site scripting, not RCE.
+  - id: sharepoint-se-signature
+    product: sharepoint
+    cves: [CVE-2026-102866]
+    title: SharePoint improper cryptographic signature verification (elevation of privilege)
+    status: partial
+    fixed_build_se: 16.0.20326.20190
+    sources:
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-102866
+      - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-102866
+    action: Install the October 2026 SharePoint security update. Fixed build is known only for SharePoint Server Subscription Edition (NVD); SharePoint 2016/2019 builds must be checked on the MSRC page.
+  - id: exchange-oct2026-manual
+    product: exchange
+    cves: [CVE-2026-70571]
+    title: Exchange Server stack-based buffer overflow (remote code execution)
+    status: manual
+    sources:
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-70571
+      - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-70571
+    action: Install the latest Exchange Server security update. NVD had no affected/fixed build data on 2026-11-06 ("Awaiting Analysis"), so no build number is asserted.
+  - id: windows-httpsys
+    product: windows
+    cves: [CVE-2026-70247]
+    title: 'Windows HTTP.sys out-of-bounds read (NVD: authorized attacker, code execution LOCALLY)'
+    status: verified
+    sources:
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-70247
+    action: Install the October 2026 Windows cumulative update.
+    notes: The project brief called this a remote HTTP.sys RCE; NVD describes local code execution by an authorized attacker.
+  - id: windows-iis-eop
+    product: windows
+    cves: [CVE-2026-78459]
+    title: Windows IIS heap-based buffer overflow (elevation of privilege, local)
+    status: verified
+    sources:
+      - https://nvd.nist.gov/vuln/detail/CVE-2026-78459
+    action: Install the October 2026 Windows cumulative update.
+# Fixed Windows builds (versionEndExcluding in NVD CPE data for CVE-2026-70247 and CVE-2026-78459, identical).
+# family: client | server. The same build number can be a client and a server OS, so family matters.
+windows_builds:
+  - {os: 'Windows Server 2016 / Windows 10 1607', family: any, prefix: '10.0.14393', fixed: '10.0.14393.9612'}
+  - {os: 'Windows Server 2019 / Windows 10 1809', family: any, prefix: '10.0.17763', fixed: '10.0.17763.9376'}
+  - {os: 'Windows 10 21H2', family: client, prefix: '10.0.19044', fixed: '10.0.19044.7807'}
+  - {os: 'Windows 10 22H2', family: client, prefix: '10.0.19045', fixed: '10.0.19045.7807'}
+  - {os: 'Windows Server 2022', family: server, prefix: '10.0.20348', fixed: '10.0.20348.5761'}
+  - {os: 'Windows 11 23H2', family: client, prefix: '10.0.22631', fixed: '10.0.22631.7652'}
+  - {os: 'Windows 11 24H2', family: client, prefix: '10.0.26100', fixed: '10.0.26100.9711'}
+  - {os: 'Windows Server 2025', family: server, prefix: '10.0.26100', fixed: '10.0.26100.33650'}
+  - {os: 'Windows 11 25H2', family: client, prefix: '10.0.26200', fixed: '10.0.26200.9711'}
+  - {os: 'Windows 11 26H2', family: client, prefix: '10.0.26300', fixed: '10.0.26300.9711'}
+  - {os: 'Windows 11 26H1', family: client, prefix: '10.0.28000', fixed: '10.0.28000.3231'}

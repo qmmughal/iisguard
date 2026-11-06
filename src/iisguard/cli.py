@@ -18,7 +18,6 @@ from iisguard.rules import RuleError, RuleSet, load_rules
 # command -> (milestone that implements it, help text)
 PLANNED: dict[str, tuple[str, str]] = {
     "watch": ("M4", "tail logs and block attackers (dry-run unless --live)"),
-    "audit": ("M2", "audit software against CISA KEV and known fixed versions [--kev] [--offline]"),
     "fim": ("M3", "file-integrity baseline: fim init | fim check"),
     "hunt": ("M3", "hunt for web-shells and suspicious files in a webroot"),
     "exposure": ("M5", "read-only external exposure check: exposure --url <your domain>"),
@@ -52,6 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--admin-ip", action="append", default=[], help="IP that must never be blocked (repeatable)")
     sc.add_argument("--no-detect-admin", action="store_true", help="skip auto-detection of your RDP/SSH session")
     sc.add_argument("--fail-on", choices=SEVERITIES, help="exit 1 if a finding of this severity or higher exists")
+
+    au = sub.add_parser("audit", help="audit installed software against CISA KEV and known fixed versions")
+    au.add_argument("--kev", action="store_true", help="also match CISA KEV (downloads the feed unless --offline)")
+    au.add_argument("--offline", action="store_true", help="no network: use cache or bundled KEV snapshot")
+    au.add_argument("--inventory", help="JSON inventory file instead of scanning this machine")
+    au.add_argument("--webroot", action="append", default=[], help="folder to search for WordPress (repeatable)")
+    au.add_argument("--app-root", action="append", default=[], help="folder to search for self-contained .NET apps")
+    au.add_argument("--php-dir", action="append", default=[], help="extra folder to search for php binaries")
+    au.add_argument("--output-format", choices=("table", "json"), default="table")
+    au.add_argument("--all", action="store_true", help="also show items that are already fixed")
+    au.add_argument("--cache-dir", help="where the KEV feed is cached")
+    au.add_argument("--fail-on-vulnerable", action="store_true", help="exit 1 on vulnerable/EOL/misconfigured")
 
     for name, (ms, text) in PLANNED.items():
         sub.add_parser(name, help=f"{text} [planned {ms}]", add_help=True).add_argument(
@@ -89,6 +100,40 @@ def _cmd_scan(a: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_audit(a: argparse.Namespace) -> int:
+    import json
+    from pathlib import Path
+
+    from iisguard.audit.collect import collect_all
+    from iisguard.audit.engine import Auditor, render_table
+    from iisguard.audit.inventory import load_inventory
+    from iisguard.audit.kev import load_kev
+
+    try:
+        items = load_inventory(a.inventory) if a.inventory else collect_all(a.webroot, a.app_root, a.php_dir)
+    except (OSError, ValueError, KeyError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    kev = load_kev(offline=a.offline, cache_dir=Path(a.cache_dir) if a.cache_dir else None) if a.kev else None
+    auditor = Auditor(kev)
+    findings = auditor.run(items)
+    watch = auditor.kev_watch(items) if kev else []
+    if a.output_format == "json":
+        print(json.dumps({"kev": {"source": kev.source, "catalog": kev.catalog_version} if kev else None,
+                          "inventory": len(items), "findings": [f.to_dict() for f in findings],
+                          "kev_watch": watch}, indent=2))  # fmt: skip
+    else:
+        kev_note = f" KEV catalog {kev.catalog_version} ({kev.source})." if kev else ""
+        print(f"Inventory: {len(items)} item(s).{kev_note}")
+        print(render_table(findings, a.all))
+        if watch:
+            print("\nRecent KEV entries (12 months) for products found here; no verified fixed-version rule:")
+            for w in watch:
+                print(f"  {w['cve']}  {w['product']:<14} found={w['found']:<24} due={w['kev_due']}  {w['name']}")
+    bad = {"vulnerable", "eol", "config"}
+    return 1 if a.fail_on_vulnerable and any(f.status in bad for f in findings) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -97,6 +142,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "scan":
         return _cmd_scan(args)
+    if args.command == "audit":
+        return _cmd_audit(args)
     ms = PLANNED[args.command][0]
     print(f"iisguard {args.command}: not implemented yet (planned for {ms}).", file=sys.stderr)
     return 2

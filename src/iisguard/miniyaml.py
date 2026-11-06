@@ -55,15 +55,54 @@ def _scalar(text: str, lineno: int) -> Any:
         return []
     if t == "{}":
         return {}
-    if t[0] == "[" and t[-1] == "]" and "'" not in t and '"' not in t:
-        return [_scalar(p, lineno) for p in t[1:-1].split(",") if p.strip()]
     if t[0] in "[{":
-        raise YamlError(f"line {lineno}: only simple unquoted inline lists and [] / {{}} are supported")
+        return _flow(t, lineno)
     if re.fullmatch(r"-?\d+", t):
         return int(t)
     if re.fullmatch(r"-?\d+\.\d+", t):
         return float(t)
     return t
+
+
+def _split_top(text: str, lineno: int) -> list[str]:
+    """Split on commas that are outside quotes."""
+    parts: list[str] = []
+    cur: list[str] = []
+    q = ""
+    for ch in text:
+        if q:
+            cur.append(ch)
+            if ch == q:
+                q = ""
+        elif ch in "'\"":
+            q = ch
+            cur.append(ch)
+        elif ch == ",":
+            parts.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    if q:
+        raise YamlError(f"line {lineno}: unterminated quote in inline collection")
+    parts.append("".join(cur))
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _flow(t: str, lineno: int) -> Any:
+    """Flat inline collections: [a, 'b'] and {k: v, k2: 'v2'} (no nesting)."""
+    close = "]" if t[0] == "[" else "}"
+    if not t.endswith(close):
+        raise YamlError(f"line {lineno}: inline collection must end with {close!r}")
+    items = _split_top(t[1:-1], lineno)
+    if close == "]":
+        return [_scalar(i, lineno) for i in items]
+    out: dict[str, Any] = {}
+    for item in items:
+        m = re.match(r"^([A-Za-z0-9_.\-]+):\s+(.*)$", item)
+        if not m:
+            raise YamlError(f"line {lineno}: bad inline mapping item {item!r}")
+        out[m.group(1)] = _scalar(m.group(2), lineno)
+    return out
 
 
 def loads(text: str) -> Any:
