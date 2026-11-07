@@ -504,7 +504,7 @@ def test_update_cdn_ranges_refresh(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 def test_published_rule_pack_index_matches_bundled_rules() -> None:
     index = json.loads((ROOT / "rule-packs" / "index.json").read_text(encoding="utf-8"))
     pack = index["packs"][0]
-    data = (ROOT / "rule-packs" / pack["file"]).read_bytes()
+    data = (ROOT / "rule-packs" / pack["file"]).read_bytes().replace(b"\r\n", b"\n")
     assert hashlib.sha256(data).hexdigest() == pack["sha256"], "run: python scripts/build_rule_pack_index.py"
     assert pack["version"] == rules_update.bundled_version() and data.replace(b"\r\n", b"\n") == bundled_yaml().replace(
         b"\r\n", b"\n"

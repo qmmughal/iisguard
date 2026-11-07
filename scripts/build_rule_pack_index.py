@@ -10,15 +10,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 src = root / "src" / "iisguard" / "rules"
 pack = root / "rule-packs" / "web-core"
 pack.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(src / "rules.yaml", pack / "rules.yaml")
-data = (pack / "rules.yaml").read_bytes()
+data = (
+    (src / "rules.yaml").read_bytes().replace(b"\r\n", b"\n")
+)  # always hash/publish LF: that is what git and raw.githubusercontent serve
+(pack / "rules.yaml").write_bytes(data)
 index = {
     "schema": 1,
     "packs": [
